@@ -1,9 +1,11 @@
-#include <stdio.h>
 #include <stdbool.h>
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
+#include <stdio.h>
+#include "St.h"
+
 #define DISP_W 500
 #define DISP_H 720
 #define FRAMERATE 60
@@ -17,11 +19,19 @@ ALLEGRO_EVENT_QUEUE* allQueue;
 ALLEGRO_EVENT allEvent;
 ALLEGRO_TIMER* allTimer;
 ALLEGRO_FONT* font;
+ALLEGRO_FONT* bigFont;
 
 typedef struct MouseInteract {
     int x, y;
     bool pressed;
+    short int layer;
 }MouseInteract;
+
+typedef struct Calc {
+    St* left, *right;
+    short int leftFracPos, rightFracPos, places;
+    bool show, fracMode;
+}Calc;
 
 void InitTest(bool testRes, char* name)
 {
@@ -40,6 +50,8 @@ void InitAllegroVars()
     InitTest(al_install_mouse(), "mouse");
     font = al_load_ttf_font("font.ttf", DISP_W / 18, 0);
     InitTest(font, "font.ttf");
+    bigFont = al_load_ttf_font("font.ttf", DISP_W / 9, 0);
+    InitTest(bigFont, "font.ttf");
     allBuffer = al_create_bitmap(DISP_W, DISP_H);
     InitTest(allBuffer, "bitmap allBuffer");
     allDisplay = al_create_display(DISP_W, DISP_H);
@@ -53,7 +65,6 @@ void InitAllegroVars()
     al_register_event_source(allQueue, al_get_timer_event_source(allTimer));
     al_start_timer(allTimer);
 }
-
 void EventHandler(bool* reDraw, MouseInteract *str) {
     al_wait_for_event(allQueue, &allEvent);
     switch (allEvent.type) {
@@ -72,14 +83,12 @@ void EventHandler(bool* reDraw, MouseInteract *str) {
         break;
     }
 }
-
 void DrawRectangle(int x, int y, ALLEGRO_COLOR col, char label[10]) {
     al_draw_filled_rectangle(x, y, x + 100, y + 80, col);
     al_draw_rectangle(x, y, x + 100, y + 80, al_map_rgb(210, 210, 210), 5);
     al_draw_text(font, al_map_rgb(10, 10, 10), x + 50, (2 * y + 80 - al_get_font_line_height(font))/2, ALLEGRO_ALIGN_CENTRE, label);
 }
-
-void DrawAnyLayer() {
+void DrawAnyLayer(Calc calcValues) {
     al_draw_filled_rectangle(0, 0, 600, 240, al_map_rgb(245, 245, 245));
     DrawRectangle(100, 640, BASEBUTTCOL, "*-1");
     DrawRectangle(200, 640, BASEBUTTCOL, "0");
@@ -99,8 +108,8 @@ void DrawAnyLayer() {
     DrawRectangle(200, 240, BASEBUTTCOL, "3/3");
     DrawRectangle(100, 240, BASEBUTTCOL, "2/3");
     DrawRectangle(0, 240, BASEBUTTCOL, "1/3");
+    al_draw_textf(bigFont, al_map_rgb(10, 10, 10), 486, 140, ALLEGRO_ALIGN_RIGHT, "%.*f", calcValues.places, calcStack(calcValues.left, calcValues.places));
 }
-
 void DrawFirstLayer() {
     DrawRectangle(0, 320, DARKERBUTTCOL, "^2");
     DrawRectangle(0, 400, DARKERBUTTCOL, "ln");
@@ -115,7 +124,6 @@ void DrawFirstLayer() {
     DrawRectangle(400, 400, DARKERBUTTCOL, "*");
     DrawRectangle(400, 320, DARKERBUTTCOL, "/");
 }
-
 void DrawSecondLayer() {
     DrawRectangle(0, 320, DARKERBUTTCOL, "pi");
     DrawRectangle(0, 400, DARKERBUTTCOL, "e");
@@ -130,7 +138,6 @@ void DrawSecondLayer() {
     DrawRectangle(400, 400, DARKERBUTTCOL, "ctg");
     DrawRectangle(400, 320, DARKERBUTTCOL, "rand");
 }
-
 void DrawThirdLayer() {
     DrawRectangle(0, 320, DARKERBUTTCOL, "floor");
     DrawRectangle(0, 400, DARKERBUTTCOL, "ceiling");
@@ -143,14 +150,13 @@ void DrawThirdLayer() {
     DrawRectangle(400, 560, DARKERBUTTCOL, "And");
     DrawRectangle(400, 480, DARKERBUTTCOL, "Or");
     DrawRectangle(400, 400, DARKERBUTTCOL, "Xor");
-    DrawRectangle(400, 320, DARKERBUTTCOL, "Xnor");
+    DrawRectangle(400, 320, DARKERBUTTCOL, "To Dec");
 }
-
-void MainDraw(bool *reDraw, short int *layer) {
+void MainDraw(bool *reDraw, short int layer, Calc calcValues) {
     al_set_target_bitmap(allBuffer);
     al_clear_to_color(al_map_rgb(0, 0, 0));
-    DrawAnyLayer();
-    switch (*layer) {
+    DrawAnyLayer(calcValues);
+    switch (layer) {
     case 0:
         DrawFirstLayer();
         break;
@@ -166,124 +172,118 @@ void MainDraw(bool *reDraw, short int *layer) {
     al_flip_display();
     reDraw = false;
 }
-
-void HandleMouse(MouseInteract* mouse, short int *layer) {
-    if ((*mouse).y > 240 && (*mouse).y < 320) {
-        if ((*mouse).x > 0 && (*mouse).x < 100) {
-            *layer = 0;
-        } else if ((*mouse).x > 100 && (*mouse).x < 200) {
-            *layer = 1;
+void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
+    if (mouse->y > 240 && mouse->y < 320) {
+        if (mouse->x > 0 && mouse->x < 100) {
+            mouse->layer = 0;
+        } else if (mouse->x > 100 && mouse->x < 200) {
+            mouse->layer = 1;
         }
-        else if ((*mouse).x > 200 && (*mouse).x < 300) {
-            *layer = 2;
+        else if (mouse->x > 200 && mouse->x < 300) {
+            mouse->layer = 2;
         }
-        else if ((*mouse).x > 300 && (*mouse).x < 400) {
-
-        }
-        else if ((*mouse).x > 400 && (*mouse).x < 500) {
+        else if (mouse->x > 300 && mouse->x < 400) {
 
         }
-    }
-    else if ((*mouse).y > 320 && (*mouse).y < 400) {
-        if ((*mouse).x > 0 && (*mouse).x < 100) {
-
-        }
-        else if ((*mouse).x > 100 && (*mouse).x < 200) {
-
-        }
-        else if ((*mouse).x > 200 && (*mouse).x < 300) {
-
-        }
-        else if ((*mouse).x > 300 && (*mouse).x < 400) {
-
-        }
-        else if ((*mouse).x > 400 && (*mouse).x < 500) {
+        else if (mouse->x > 400 && mouse->x < 500) {
 
         }
     }
-    else if ((*mouse).y > 400 && (*mouse).y < 480) {
-        if ((*mouse).x > 0 && (*mouse).x < 100) {
+    else if (mouse->y > 320 && mouse->y < 400) {
+        if (mouse->x > 0 && mouse->x < 100) {
 
         }
-        else if ((*mouse).x > 100 && (*mouse).x < 200) {
+        else if (mouse->x > 100 && mouse->x < 200) {
 
         }
-        else if ((*mouse).x > 200 && (*mouse).x < 300) {
+        else if (mouse->x > 200 && mouse->x < 300) {
 
         }
-        else if ((*mouse).x > 300 && (*mouse).x < 400) {
+        else if (mouse->x > 300 && mouse->x < 400) {
 
         }
-        else if ((*mouse).x > 400 && (*mouse).x < 500) {
-
-        }
-    }
-    else if ((*mouse).y > 480 && (*mouse).y < 560) {
-        if ((*mouse).x > 0 && (*mouse).x < 100) {
-
-        }
-        else if ((*mouse).x > 100 && (*mouse).x < 200) {
-
-        }
-        else if ((*mouse).x > 200 && (*mouse).x < 300) {
-
-        }
-        else if ((*mouse).x > 300 && (*mouse).x < 400) {
-
-        }
-        else if ((*mouse).x > 400 && (*mouse).x < 500) {
+        else if (mouse->x > 400 && mouse->x < 500) {
 
         }
     }
-    else if ((*mouse).y > 560 && (*mouse).y < 640) {
-        if ((*mouse).x > 0 && (*mouse).x < 100) {
+    else if (mouse->y > 400 && mouse->y < 480) {
+        if (mouse->x > 0 && mouse->x < 100) {
 
         }
-        else if ((*mouse).x > 100 && (*mouse).x < 200) {
-
+        else if (mouse->x > 100 && mouse->x < 200) {
         }
-        else if ((*mouse).x > 200 && (*mouse).x < 300) {
-
+        else if (mouse->x > 200 && mouse->x < 300) {
         }
-        else if ((*mouse).x > 300 && (*mouse).x < 400) {
-
+        else if (mouse->x > 300 && mouse->x < 400) {
         }
-        else if ((*mouse).x > 400 && (*mouse).x < 500) {
+        else if (mouse->x > 400 && mouse->x < 500) {
 
         }
     }
-    else if ((*mouse).y > 640 && (*mouse).y < 720) {
-        if ((*mouse).x > 0 && (*mouse).x < 100) {
+    else if (mouse->y > 480 && mouse->y < 560) {
+        if (mouse->x > 0 && mouse->x < 100) {
 
         }
-        else if ((*mouse).x > 100 && (*mouse).x < 200) {
+        else if (mouse->x > 100 && mouse->x < 200) {
+        }
+        else if (mouse->x > 200 && mouse->x < 300) {
+        }
+        else if (mouse->x > 300 && mouse->x < 400) {
 
         }
-        else if ((*mouse).x > 200 && (*mouse).x < 300) {
-
-        }
-        else if ((*mouse).x > 300 && (*mouse).x < 400) {
-
-        }
-        else if ((*mouse).x > 400 && (*mouse).x < 500) {
+        else if (mouse->x > 400 && mouse->x < 500) {
 
         }
     }
-    (*mouse).pressed = false;
+    else if (mouse->y > 560 && mouse->y < 640) {
+        if (mouse->x > 0 && mouse->x < 100) {
+
+        }
+        else if (mouse->x > 100 && mouse->x < 200) {
+        }
+        else if (mouse->x > 200 && mouse->x < 300) {
+ 
+        }
+        else if (mouse->x > 300 && mouse->x < 400) {
+        }
+        else if (mouse->x > 400 && mouse->x < 500) {
+
+        }
+    }
+    else if (mouse->y > 640 && mouse->y < 720) {
+        if (mouse->x > 0 && mouse->x < 100) {
+
+        }
+        else if (mouse->x > 100 && mouse->x < 200) {
+
+        }
+        else if (mouse->x > 200 && mouse->x < 300) {
+        }
+        else if (mouse->x > 300 && mouse->x < 400) {
+
+        }
+        else if (mouse->x > 400 && mouse->x < 500) {
+
+        }
+    }
+    mouse->pressed = false;
 }
-
 int main() {
     InitAllegroVars();
     bool reDraw = false;
-    short int layer = 0;
     MouseInteract ms;
-    ms.pressed = 0;
+    ms.pressed = ms.layer = 0;
+    Calc calcValues;
+    calcValues.left = NULL;
+    calcValues.right = NULL;
+    calcValues.leftFracPos = calcValues.rightFracPos = calcValues.places = 0;
+    calcValues.show = false;
     while (true) {
         EventHandler(&reDraw, &ms);
         if (reDraw && al_is_event_queue_empty(allQueue)) {
-            MainDraw(&reDraw, &layer);
+            MainDraw(&reDraw, ms.layer, calcValues);
             if (ms.pressed == 1) {
-                HandleMouse(&ms, &layer);
+                HandleMouse(&ms, &calcValues);
             }
         }
     }
