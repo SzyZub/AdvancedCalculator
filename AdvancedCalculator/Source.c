@@ -4,7 +4,6 @@
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
 #include <stdio.h>
-#include "St.h"
 
 #define DISP_W 500
 #define DISP_H 720
@@ -28,8 +27,8 @@ typedef struct MouseInteract {
 }MouseInteract;
 
 typedef struct Calc {
-    St* left, *right;
-    short int leftFracPos, rightFracPos, places;
+    double a, b;
+    short int fracCountA, CountA;
     bool show, fracMode;
 }Calc;
 
@@ -50,7 +49,7 @@ void InitAllegroVars()
     InitTest(al_install_mouse(), "mouse");
     font = al_load_ttf_font("font.ttf", DISP_W / 18, 0);
     InitTest(font, "font.ttf");
-    bigFont = al_load_ttf_font("font.ttf", DISP_W / 9, 0);
+    bigFont = al_load_ttf_font("font.ttf", DISP_W / 11, 0);
     InitTest(bigFont, "font.ttf");
     allBuffer = al_create_bitmap(DISP_W, DISP_H);
     InitTest(allBuffer, "bitmap allBuffer");
@@ -108,7 +107,7 @@ void DrawAnyLayer(Calc calcValues) {
     DrawRectangle(200, 240, BASEBUTTCOL, "3/3");
     DrawRectangle(100, 240, BASEBUTTCOL, "2/3");
     DrawRectangle(0, 240, BASEBUTTCOL, "1/3");
-    al_draw_textf(bigFont, al_map_rgb(10, 10, 10), 486, 140, ALLEGRO_ALIGN_RIGHT, "%.*f", calcValues.places, calcStack(calcValues.left, calcValues.places));
+    al_draw_textf(bigFont, al_map_rgb(10, 10, 10), 486, 140, ALLEGRO_ALIGN_RIGHT, "%.*f", calcValues.fracCountA, calcValues.a);
 }
 void DrawFirstLayer() {
     DrawRectangle(0, 320, DARKERBUTTCOL, "^2");
@@ -172,6 +171,23 @@ void MainDraw(bool *reDraw, short int layer, Calc calcValues) {
     al_flip_display();
     reDraw = false;
 }
+void ExpandNumb(Calc *calcValues, int num) {
+    if (calcValues->CountA < 14) {
+        if (!calcValues->fracMode) {
+            long long temp = (long long) calcValues->a;
+            calcValues->a -= temp;
+            temp *= 10;
+            temp += num;
+            calcValues->a +=  temp;
+            calcValues->CountA++;
+        }
+        else {
+            calcValues->fracCountA++;
+            calcValues->a += num * (1.0 / pow(10, calcValues->fracCountA));
+            calcValues->CountA++;
+        }
+    }
+}
 void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
     if (mouse->y > 240 && mouse->y < 320) {
         if (mouse->x > 0 && mouse->x < 100) {
@@ -183,7 +199,12 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
             mouse->layer = 2;
         }
         else if (mouse->x > 300 && mouse->x < 400) {
-
+            calcValues->a = 0;
+            calcValues->b = 0;
+            calcValues->show = false;
+            calcValues->fracCountA = 0;
+            calcValues->CountA = 0;
+            calcValues->fracMode = false;
         }
         else if (mouse->x > 400 && mouse->x < 500) {
 
@@ -211,10 +232,13 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
 
         }
         else if (mouse->x > 100 && mouse->x < 200) {
+            ExpandNumb(calcValues, 7);
         }
         else if (mouse->x > 200 && mouse->x < 300) {
+            ExpandNumb(calcValues, 8);
         }
         else if (mouse->x > 300 && mouse->x < 400) {
+            ExpandNumb(calcValues, 9);
         }
         else if (mouse->x > 400 && mouse->x < 500) {
 
@@ -225,11 +249,13 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
 
         }
         else if (mouse->x > 100 && mouse->x < 200) {
+            ExpandNumb(calcValues, 4);
         }
         else if (mouse->x > 200 && mouse->x < 300) {
+            ExpandNumb(calcValues, 5);
         }
         else if (mouse->x > 300 && mouse->x < 400) {
-
+            ExpandNumb(calcValues, 6);
         }
         else if (mouse->x > 400 && mouse->x < 500) {
 
@@ -240,11 +266,13 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
 
         }
         else if (mouse->x > 100 && mouse->x < 200) {
+            ExpandNumb(calcValues, 1);
         }
         else if (mouse->x > 200 && mouse->x < 300) {
- 
+            ExpandNumb(calcValues, 2);
         }
         else if (mouse->x > 300 && mouse->x < 400) {
+            ExpandNumb(calcValues, 3);
         }
         else if (mouse->x > 400 && mouse->x < 500) {
 
@@ -252,15 +280,15 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
     }
     else if (mouse->y > 640 && mouse->y < 720) {
         if (mouse->x > 0 && mouse->x < 100) {
-
         }
         else if (mouse->x > 100 && mouse->x < 200) {
-
+            calcValues->a *= -1;
         }
         else if (mouse->x > 200 && mouse->x < 300) {
+            ///00000000000000000
         }
         else if (mouse->x > 300 && mouse->x < 400) {
-
+            calcValues->fracMode = !calcValues->fracMode;
         }
         else if (mouse->x > 400 && mouse->x < 500) {
 
@@ -274,9 +302,9 @@ int main() {
     MouseInteract ms;
     ms.pressed = ms.layer = 0;
     Calc calcValues;
-    calcValues.left = NULL;
-    calcValues.right = NULL;
-    calcValues.leftFracPos = calcValues.rightFracPos = calcValues.places = 0;
+    calcValues.a = 0;
+    calcValues.b = 0;
+    calcValues.fracCountA = 0;
     calcValues.show = false;
     while (true) {
         EventHandler(&reDraw, &ms);
