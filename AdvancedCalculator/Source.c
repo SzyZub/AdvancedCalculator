@@ -132,7 +132,7 @@ void DrawAnyLayer(Calc calcValues) {
             al_draw_textf(font, al_map_rgb(10, 10, 10), 486, 140, ALLEGRO_ALIGN_RIGHT, "%g", calcValues.b);
         }
         for (int i = 0; i < 10 && calcValues.label != "/0"; i++) {
-            al_draw_textf(font, al_map_rgb(10, 10, 10), 20 + 20 * i, 70, ALLEGRO_ALIGN_RIGHT, "%c", calcValues.label[i]);
+            al_draw_textf(font, al_map_rgb(10, 10, 10), 30 + 18 * i, 70, ALLEGRO_ALIGN_RIGHT, "%c", calcValues.label[i]);
         }
     }
     }
@@ -327,6 +327,15 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
             if (mouse->layer == 0) {
                 PutToB(calcValues, "-");
             }
+            else if (mouse->layer == 1) {
+                calcValues->a = tan(calcValues->a);
+                calcValues->fracCountA = 6;
+                calcValues->fracMode = false;
+                calcValues->CountA = 6 + CountInts(*calcValues);
+            }
+            else if (mouse->layer == 2) {
+                PutToB(calcValues, "Or");
+            }
         }
     }
     else if (mouse->y > 560 && mouse->y < 640) {
@@ -336,8 +345,15 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
                 calcValues->CountA = CountInts(*calcValues);
                 if (calcValues->a != (long long)calcValues->a) {
                     calcValues->fracCountA = 6;
-                    calcValues->CountA += 6;
+                    calcValues->CountA += CountInts(*calcValues) + 6;
                 }
+            }
+            else if (mouse->layer == 1) {
+                PutToB(calcValues, "^");
+            }
+            else if (mouse->layer == 2){
+                PutToB(calcValues, "<<");
+
             }
         }
         else if (mouse->x > 100 && mouse->x < 200) {
@@ -352,6 +368,15 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
         else if (mouse->x > 400 && mouse->x < 500) {
             if (mouse->layer == 0) {
                 PutToB(calcValues, "+");
+            }
+            else if (mouse->layer == 1) {
+                calcValues->a = cos(calcValues->a);
+                calcValues->fracCountA = 6;
+                calcValues->fracMode = false;
+                calcValues->CountA = 7;
+            }
+            else if (mouse->layer == 2) {
+                PutToB(calcValues, "And");
             }
         }
     }
