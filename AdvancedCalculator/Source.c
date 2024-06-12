@@ -5,6 +5,7 @@
 #include <allegro5/allegro_ttf.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 
 #define DISP_W 500
 #define DISP_H 720
@@ -31,6 +32,7 @@ typedef struct Calc {
     double a, b;
     short int fracCountA, CountA, fracCountB, CountB;
     bool show, fracMode;
+    char label[10];
 }Calc;
 
 Calc InitCalc() {
@@ -38,6 +40,7 @@ Calc InitCalc() {
     calcValues.a = calcValues.b = 0;
     calcValues.fracCountA = calcValues.fracCountB = calcValues.CountA = calcValues.CountB = 0;
     calcValues.show = calcValues.fracMode = false;
+    calcValues.label;
     return calcValues;
 }
 void InitTest(bool testRes, char* name)
@@ -115,8 +118,24 @@ void DrawAnyLayer(Calc calcValues) {
     DrawRectangle(200, 240, BASEBUTTCOL, "3/3");
     DrawRectangle(100, 240, BASEBUTTCOL, "2/3");
     DrawRectangle(0, 240, BASEBUTTCOL, "1/3");
-    al_draw_textf(bigFont, al_map_rgb(10, 10, 10), 486, 140, ALLEGRO_ALIGN_RIGHT, "%.*f", calcValues.fracCountA, calcValues.a);
-}
+    if (calcValues.CountA < 15) {
+        al_draw_textf(bigFont, al_map_rgb(10, 10, 10), 486, 140, ALLEGRO_ALIGN_RIGHT, "%.*f", calcValues.fracCountA, calcValues.a);
+    }
+    else {
+        al_draw_textf(bigFont, al_map_rgb(10, 10, 10), 486, 140, ALLEGRO_ALIGN_RIGHT, "%g", calcValues.a);
+    }
+    if (calcValues.show) {
+        if (calcValues.CountB < 15) {
+            al_draw_textf(font, al_map_rgb(10, 10, 10), 486, 70, ALLEGRO_ALIGN_RIGHT, "%.*f", calcValues.fracCountB, calcValues.b);
+        }
+        else {
+            al_draw_textf(font, al_map_rgb(10, 10, 10), 486, 140, ALLEGRO_ALIGN_RIGHT, "%g", calcValues.b);
+        }
+        for (int i = 0; i < 10 && calcValues.label != "/0"; i++) {
+            al_draw_textf(font, al_map_rgb(10, 10, 10), 20 + 20 * i, 70, ALLEGRO_ALIGN_RIGHT, "%c", calcValues.label[i]);
+        }
+    }
+    }
 void DrawFirstLayer() {
     DrawRectangle(0, 320, DARKERBUTTCOL, "^2");
     DrawRectangle(0, 400, DARKERBUTTCOL, "ln");
@@ -181,20 +200,42 @@ void MainDraw(bool *reDraw, short int layer, Calc calcValues) {
 }
 void ExpandNumb(Calc *calcValues, int num) {
     if (calcValues->CountA < 14) {
-        if (!calcValues->fracMode) {
-            long long temp = (long long) calcValues->a;
-            calcValues->a -= temp;
-            temp *= 10;
-            temp += num;
-            calcValues->a +=  temp;
-            calcValues->CountA++;
-        }
-        else {
-            calcValues->fracCountA++;
-            calcValues->a += num * (1.0 / pow(10, calcValues->fracCountA));
-            calcValues->CountA++;
+        if (calcValues->a >= 0) {
+            if (!calcValues->fracMode) {
+                long long temp = (long long)calcValues->a;
+                calcValues->a -= temp;
+                temp *= 10;
+                temp += num;
+                calcValues->a += temp;
+                calcValues->CountA++;
+            }
+            else {
+                calcValues->fracCountA++;
+                calcValues->a += num * (1.0 / pow(10, calcValues->fracCountA));
+                calcValues->CountA++;
+            }
         }
     }
+}
+long long CountInts(Calc calcValues) {
+    int count = 0;  
+    long long value = calcValues.a;
+    while (value != 0)
+    {
+        value = value / 10;
+        count++;
+    }
+    return count;
+}
+void PutToB(Calc* calcValues, char label[10]) {
+    calcValues->show = true;
+    calcValues->b = calcValues->a;
+    calcValues->CountB = calcValues->CountA;
+    calcValues->fracCountB = calcValues->fracCountA;
+    calcValues->a = 0;
+    calcValues->CountA = 0;
+    calcValues->fracCountA = 0;
+    strcpy_s(calcValues->label, sizeof(label), label);
 }
 void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
     if (mouse->y > 240 && mouse->y < 320) {
@@ -245,7 +286,9 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
 
         }
         else if (mouse->x > 400 && mouse->x < 500) {
-
+            if (mouse->layer == 0) {
+                PutToB(calcValues, "/");
+            }
         }
     }
     else if (mouse->y > 400 && mouse->y < 480) {
@@ -262,7 +305,9 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
             ExpandNumb(calcValues, 9);
         }
         else if (mouse->x > 400 && mouse->x < 500) {
-
+            if (mouse->layer == 0) {
+                PutToB(calcValues, "*");
+            }
         }
     }
     else if (mouse->y > 480 && mouse->y < 560) {
@@ -279,12 +324,21 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
             ExpandNumb(calcValues, 6);
         }
         else if (mouse->x > 400 && mouse->x < 500) {
-
+            if (mouse->layer == 0) {
+                PutToB(calcValues, "-");
+            }
         }
     }
     else if (mouse->y > 560 && mouse->y < 640) {
         if (mouse->x > 0 && mouse->x < 100) {
-
+            if (mouse->layer == 0) {
+                calcValues->a = pow(2, calcValues->a);
+                calcValues->CountA = CountInts(*calcValues);
+                if (calcValues->a != (long long)calcValues->a) {
+                    calcValues->fracCountA = 6;
+                    calcValues->CountA += 6;
+                }
+            }
         }
         else if (mouse->x > 100 && mouse->x < 200) {
             ExpandNumb(calcValues, 1);
@@ -296,11 +350,34 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
             ExpandNumb(calcValues, 3);
         }
         else if (mouse->x > 400 && mouse->x < 500) {
-
+            if (mouse->layer == 0) {
+                PutToB(calcValues, "+");
+            }
         }
     }
     else if (mouse->y > 640 && mouse->y < 720) {
         if (mouse->x > 0 && mouse->x < 100) {
+            if (mouse->layer == 0) {
+                calcValues->a = pow(10, calcValues->a);
+                calcValues->CountA = CountInts(*calcValues);
+                if (calcValues->a != (long long)calcValues->a) {
+                    calcValues->fracCountA = 6;
+                    calcValues->CountA += 6;
+                }
+            }
+            else if (mouse->layer == 1 && calcValues->a >= 0) {
+                double fact = 1;
+                for (double c = 1; c <= (long long)calcValues->a; c++) {
+                    fact = fact * c;
+                }
+                calcValues->a = fact;
+                calcValues->fracCountA = 0;
+                calcValues->fracMode = false;
+                calcValues->CountA = CountInts(*calcValues);
+            }
+            else if (mouse->layer == 2) {
+                PutToB(calcValues, ">>");
+            }
         }
         else if (mouse->x > 100 && mouse->x < 200) {
             calcValues->a *= -1;
