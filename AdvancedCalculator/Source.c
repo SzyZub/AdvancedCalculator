@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
 
 #define DISP_W 500
 #define DISP_H 720
@@ -139,7 +140,7 @@ void DrawAnyLayer(Calc calcValues) {
 void DrawFirstLayer() {
     DrawRectangle(0, 320, DARKERBUTTCOL, "^2");
     DrawRectangle(0, 400, DARKERBUTTCOL, "ln");
-    DrawRectangle(0, 480, DARKERBUTTCOL, "log");
+    DrawRectangle(0, 480, DARKERBUTTCOL, "log10");
     DrawRectangle(0, 560, DARKERBUTTCOL, "2^x");
     DrawRectangle(0, 640, DARKERBUTTCOL, "10^x");
     DrawRectangle(100, 320, DARKERBUTTCOL, "^x");
@@ -172,11 +173,11 @@ void DrawThirdLayer() {
     DrawRectangle(0, 640, DARKERBUTTCOL, ">>");
     DrawRectangle(100, 320, DARKERBUTTCOL, "To Bin");
     DrawRectangle(200, 320, DARKERBUTTCOL, "to Oct");
-    DrawRectangle(300, 320, DARKERBUTTCOL, "to Hex");
+    DrawRectangle(300, 320, DARKERBUTTCOL, "e^");
     DrawRectangle(400, 560, DARKERBUTTCOL, "And");
     DrawRectangle(400, 480, DARKERBUTTCOL, "Or");
     DrawRectangle(400, 400, DARKERBUTTCOL, "Xor");
-    DrawRectangle(400, 320, DARKERBUTTCOL, "To Dec");
+    DrawRectangle(400, 320, DARKERBUTTCOL, "Not");
 }
 void MainDraw(bool *reDraw, short int layer, Calc calcValues) {
     al_set_target_bitmap(allBuffer);
@@ -283,17 +284,55 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
 
         }
         else if (mouse->x > 300 && mouse->x < 400) {
-
+            if (mouse->layer == 0) {
+                PutToB(calcValues, "root");
+            }
+            else if (mouse->layer == 1) {
+                calcValues->a = sin(calcValues->a);
+                calcValues->fracCountA = 6;
+                calcValues->fracMode = false;
+                calcValues->CountA = 6 + CountInts(*calcValues);
+            }
+            else {
+                calcValues->a = exp(calcValues->a);
+                calcValues->fracCountA = 6;
+                calcValues->fracMode = false;
+                calcValues->CountA = 6 + CountInts(*calcValues);
+            }
         }
         else if (mouse->x > 400 && mouse->x < 500) {
             if (mouse->layer == 0) {
                 PutToB(calcValues, "/");
             }
+            else if (mouse->layer == 1) {
+                calcValues->a = rand();
+                calcValues->CountA = CountInts(*calcValues);
+                calcValues->fracMode = false;
+            }
+            else {
+                calcValues->a = ~ (long long) calcValues->a;
+            }
         }
     }
     else if (mouse->y > 400 && mouse->y < 480) {
         if (mouse->x > 0 && mouse->x < 100) {
-
+            if (mouse->layer == 0) {
+                calcValues->a = log(calcValues->a);
+                calcValues->fracCountA = 6;
+                calcValues->fracMode = false;
+                calcValues->CountA = 6 + CountInts(*calcValues);
+            }
+            else if (mouse->layer == 1) {
+                calcValues->a = 2.71828182;
+                calcValues->fracCountA = 8;
+                calcValues->CountA = 9;
+            }
+            else {
+                calcValues->CountA -= calcValues->fracCountA;
+                calcValues->fracCountA = 0;
+                calcValues->fracMode = false;
+                calcValues->a = ceil(calcValues->a);
+            }
         }
         else if (mouse->x > 100 && mouse->x < 200) {
             ExpandNumb(calcValues, 7);
@@ -308,11 +347,34 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
             if (mouse->layer == 0) {
                 PutToB(calcValues, "*");
             }
+            else if (mouse->layer == 1) {
+                calcValues->a = 1/tan(calcValues->a);
+                calcValues->fracCountA = 6;
+                calcValues->fracMode = false;
+                calcValues->CountA = 6 + CountInts(*calcValues);
+            }
+            else {
+                PutToB(calcValues, "Xor");
+            }
         }
     }
     else if (mouse->y > 480 && mouse->y < 560) {
         if (mouse->x > 0 && mouse->x < 100) {
-
+            if (mouse->layer == 0) {
+                calcValues->a = log10(calcValues->a);
+                calcValues->fracCountA = 6;
+                calcValues->fracMode = false;
+                calcValues->CountA = 6 + CountInts(*calcValues);
+            }
+            else if (mouse->layer == 1) {
+                calcValues->a = fabs(calcValues->a);
+            }
+            else if (mouse->layer == 2) {
+                calcValues->CountA -= calcValues->fracCountA;
+                calcValues->fracCountA = 0;
+                calcValues->fracMode = false;
+                calcValues->a = round(calcValues->a);
+            }
         }
         else if (mouse->x > 100 && mouse->x < 200) {
             ExpandNumb(calcValues, 4);
@@ -432,6 +494,7 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
     mouse->pressed = false;
 }
 int main() {
+    srand(time(0));
     InitAllegroVars();
     bool reDraw = false;
     MouseInteract ms;
