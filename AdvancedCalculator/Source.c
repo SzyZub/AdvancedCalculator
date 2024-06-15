@@ -532,9 +532,9 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
                 calcValues->fracMode = false;
             }
             else {
-                calcValues->CountA -= calcValues->fracCountA;
                 calcValues->fracCountA = 0;
                 calcValues->fracMode = false;
+                calcValues->a = ceil(calcValues->a);
             }
         }
         else if (mouse->x > 100 && mouse->x < 200) {
