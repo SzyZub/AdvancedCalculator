@@ -707,6 +707,7 @@ void HandleMouse(MouseInteract* mouse, Calc* calcValues) {
             }
         }
         else if (mouse->x > 300 && mouse->x < 400) {
+            twoArgs = 1;
             calcValues->fracMode = !calcValues->fracMode;
         }
         else if (mouse->x > 400 && mouse->x < 500) {
